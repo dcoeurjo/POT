@@ -328,9 +328,9 @@ void Normalize(Points<dim, Scalar> &X, Vector<dim, Scalar> offset = Vector<dim, 
     }
     Vector<dim, Scalar> min = X.rowwise().minCoeff();
     Vector<dim, Scalar> max = X.rowwise().maxCoeff();
-    Vector<dim> scale = max - min;
-    double f = dilat/scale.maxCoeff();
-    Vector<dim> c = (min+max)*0.5;
+    Vector<dim, Scalar> scale = max - min;
+    Scalar f = dilat/scale.maxCoeff();
+    Vector<dim, Scalar> c = (min+max)*0.5;
     X.colwise() -= c;
     X *= f;
     X.colwise() += offset;
@@ -2821,7 +2821,7 @@ InjectiveMatching computePartialOrthogonalBSPOT(const Points<dim, Scalar>& A,con
     PartialBSPMatching<dim, Scalar> BSP(A,B,cost);
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++){
-        Points<dim> Q = sampleUnitGaussianMat(dim,dim).fullPivHouseholderQr().matrixQ();
+        Points<dim, Scalar> Q = sampleUnitGaussianMat(dim,dim).fullPivHouseholderQr().matrixQ();
         plans[i] = BSP.computePartialMatching(Q,false);
     }
     return MergePlans(plans,cost,T);
