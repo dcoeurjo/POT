@@ -121,8 +121,8 @@ using CovType = Eigen::Matrix<Scalar,dim,dim>;
 
 template<int dim, typename Scalar = scalar>
 struct Moments {
-    Vector<dim> mean;
-    CovType<dim> Cov;
+    Vector<dim, Scalar> mean;
+    CovType<dim, Scalar> Cov;
 };
 
 
@@ -133,35 +133,35 @@ Vector<D, Scalar> Mean(const Points<D, Scalar>& X) {
 
 template<int D, typename Scalar = scalar>
 CovType<D, Scalar> Covariance(const Points<D, Scalar>& X) {
-    Vector<D> mean = X.rowwise().mean();
-    Points<D> centered = X.colwise() - mean;
-    CovType<D> rslt = centered * centered.adjoint() / double(X.cols());
+    Vector<D, Scalar> mean = X.rowwise().mean();
+    Points<D, Scalar> centered = X.colwise() - mean;
+    CovType<D, Scalar> rslt = centered * centered.adjoint() / double(X.cols());
     return rslt;
 }
 
 template<int D, typename Scalar = scalar>
 CovType<D, Scalar> Covariance(const Points<D, Scalar>& X,const Points<D, Scalar>& Y) {
-    Vector<D> meanX = Mean(X);
-    Points<D> centeredX = X.colwise() - meanX;
-    Vector<D> meanY = Mean(Y);
-    Points<D> centeredY = Y.colwise() - meanY;
-    CovType<D> rslt = centeredX * centeredY.adjoint() / double(X.cols());
+    Vector<D, Scalar> meanX = Mean(X);
+    Points<D, Scalar> centeredX = X.colwise() - meanX;
+    Vector<D, Scalar> meanY = Mean(Y);
+    Points<D, Scalar> centeredY = Y.colwise() - meanY;
+    CovType<D, Scalar> rslt = centeredX * centeredY.adjoint() / double(X.cols());
     return rslt;
 }
 
 
 template<int dim, typename Scalar = scalar>
 CovType<dim, Scalar> sqrt(const CovType<dim, Scalar> &A) {
-    Eigen::SelfAdjointEigenSolver<CovType<dim>> root(A);
+    Eigen::SelfAdjointEigenSolver<CovType<dim, Scalar>> root(A);
     return root.operatorSqrt();
 }
 
 template<int dim, typename Scalar = scalar>
 CovType<dim, Scalar> W2GaussianTransportMap(const CovType<dim, Scalar>& A,const CovType<dim, Scalar>& B){
-    Eigen::SelfAdjointEigenSolver<CovType<dim>> sasA(A);
-    CovType<dim> root_A = sasA.operatorSqrt();
-    CovType<dim> inv_root_A = sasA.operatorInverseSqrt();
-    CovType<dim> C = root_A * B * root_A;
+    Eigen::SelfAdjointEigenSolver<CovType<dim, Scalar>> sasA(A);
+    CovType<dim, Scalar> root_A = sasA.operatorSqrt();
+    CovType<dim, Scalar> inv_root_A = sasA.operatorInverseSqrt();
+    CovType<dim, Scalar> C = root_A * B * root_A;
     C = sqrt(C);
     C = inv_root_A*C*inv_root_A;
     return C;
@@ -228,7 +228,7 @@ scalar EvalCoupling(const Coupling& pi,const cost_function& cost);
 
 template<int D, typename Scalar = scalar>
 Points<D, Scalar> CouplingToGrad(const Coupling& pi,const Points<D, Scalar>& A,const Points<D, Scalar>& B) {
-    Points<D> Grad = Points<D>::Zero(A.rows(),A.cols());
+    Points<D, Scalar> Grad = Points<D, Scalar>::Zero(A.rows(),A.cols());
     for (int k = 0;k<pi.outerSize();k++)
         for (Coupling::InnerIterator it(pi,k);it;++it)
             Grad.col(it.row()) += (B.col(it.col()) - A.col(it.row()))*it.value();
@@ -324,7 +324,7 @@ template<int dim, typename Scalar = scalar>
 void Normalize(Points<dim, Scalar> &X, Vector<dim, Scalar> offset = Vector<dim, Scalar>::Zero(dim), Scalar dilat = 1)
 {
     if (dim == -1) {
-        offset = Vector<dim>::Zero(X.rows());
+        offset = Vector<dim, Scalar>::Zero(X.rows());
     }
     Vector<dim> min = X.rowwise().minCoeff();
     Vector<dim> max = X.rowwise().maxCoeff();
@@ -339,7 +339,7 @@ void Normalize(Points<dim, Scalar> &X, Vector<dim, Scalar> offset = Vector<dim, 
 
 template<int dim, typename Scalar = scalar>
 Points<dim, Scalar> concat(const Points<dim, Scalar>& X,const Points<dim, Scalar>& Y) {
-    Points<dim> rslt(X.rows(),X.cols() + Y.cols());
+    Points<dim, Scalar> rslt(X.rows(),X.cols() + Y.cols());
     rslt << X,Y;
     return rslt;
 }
@@ -347,7 +347,7 @@ Points<dim, Scalar> concat(const Points<dim, Scalar>& X,const Points<dim, Scalar
 template<int dim, typename Scalar = scalar>
 Points<dim, Scalar> pad(const Points<dim, Scalar>& X,int target) {
     int n = X.cols();
-    Points<dim> rslt(dim,target);
+    Points<dim, Scalar> rslt(dim,target);
     for (auto i : range(target))
         rslt.col(i) = X.col(rand()%n);
     return rslt;
@@ -360,7 +360,7 @@ Points<dim, Scalar> trunc(const Points<dim, Scalar>& X,int target) {
     static thread_local std::mt19937 g(rd());
     ints I = rangeVec(X.cols());
     ::std::shuffle(I.begin(),I.end(),g);
-    Points<dim> rslt(X.rows(),target);
+    Points<dim, Scalar> rslt(X.rows(),target);
     for (auto i : range(target))
         rslt.col(i) = X.col(I[i]);
     return rslt;
@@ -2783,12 +2783,12 @@ Coupling computeBSPOTCoupling(const Points<dim, Scalar>& A,const Atoms& mu,const
 
 template<int dim, typename Scalar = scalar>
 Points<dim, Scalar> computeBSPOTGradient(const Points<dim, Scalar>& A,const Atoms& mu,const Points<dim, Scalar>& B,const Atoms& nu,int nb_plans) {
-    Points<dim> Grad = Points<dim>::Zero(A.rows(),A.cols());
+    Points<dim, Scalar> Grad = Points<dim, Scalar>::Zero(A.rows(),A.cols());
     int d = A.rows();
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++) {
         GeneralBSPMatching BSP(A,mu,B,nu);
-        Points<dim> Grad_i = BSP.computeTransportGradient();
+        Points<dim, Scalar> Grad_i = BSP.computeTransportGradient();
         #pragma omp critical
         {
             Grad += Grad_i/nb_plans;
