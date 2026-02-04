@@ -106,40 +106,41 @@ bool Smax(T& a,T b) {
 
 namespace BSPOT {
 
-template<int dim>
-using Points = Eigen::Matrix<scalar,dim,-1,Eigen::ColMajor>;
-template<int dim>
-using Vector = Eigen::Vector<scalar,dim>;
+template<int dim, typename Scalar = scalar>
+using Points = Eigen::Matrix<Scalar,dim,-1,Eigen::ColMajor>;
+template<int dim, typename Scalar = scalar>
+using Vector = Eigen::Vector<Scalar,dim>;
 
-using cost_function = std::function<scalar(size_t,size_t)>;
-template<class Point>
-using geometric_cost = std::function<scalar(const Point&,const Point&)>;
+template<typename Scalar = scalar>
+using cost_function = std::function<Scalar(size_t,size_t)>;
+template<class Point, typename Scalar = scalar>
+using geometric_cost = std::function<Scalar(const Point&,const Point&)>;
 
-template<int dim>
-using CovType = Eigen::Matrix<scalar,dim,dim>;
+template<int dim, typename Scalar = scalar>
+using CovType = Eigen::Matrix<Scalar,dim,dim>;
 
-template<int dim>
+template<int dim, typename Scalar = scalar>
 struct Moments {
     Vector<dim> mean;
     CovType<dim> Cov;
 };
 
 
-template<int D>
-Vector<D> Mean(const Points<D>& X) {
+template<int D, typename Scalar = scalar>
+Vector<D, Scalar> Mean(const Points<D, Scalar>& X) {
     return X.rowwise().mean();
 }
 
-template<int D>
-CovType<D> Covariance(const Points<D>& X) {
+template<int D, typename Scalar = scalar>
+CovType<D, Scalar> Covariance(const Points<D, Scalar>& X) {
     Vector<D> mean = X.rowwise().mean();
     Points<D> centered = X.colwise() - mean;
     CovType<D> rslt = centered * centered.adjoint() / double(X.cols());
     return rslt;
 }
 
-template<int D>
-CovType<D> Covariance(const Points<D>& X,const Points<D>& Y) {
+template<int D, typename Scalar = scalar>
+CovType<D, Scalar> Covariance(const Points<D, Scalar>& X,const Points<D, Scalar>& Y) {
     Vector<D> meanX = Mean(X);
     Points<D> centeredX = X.colwise() - meanX;
     Vector<D> meanY = Mean(Y);
@@ -149,14 +150,14 @@ CovType<D> Covariance(const Points<D>& X,const Points<D>& Y) {
 }
 
 
-template<int dim>
-CovType<dim> sqrt(const CovType<dim> &A) {
+template<int dim, typename Scalar = scalar>
+CovType<dim, Scalar> sqrt(const CovType<dim, Scalar> &A) {
     Eigen::SelfAdjointEigenSolver<CovType<dim>> root(A);
     return root.operatorSqrt();
 }
 
-template<int dim>
-CovType<dim> W2GaussianTransportMap(const CovType<dim>& A,const CovType<dim>& B){
+template<int dim, typename Scalar = scalar>
+CovType<dim, Scalar> W2GaussianTransportMap(const CovType<dim, Scalar>& A,const CovType<dim, Scalar>& B){
     Eigen::SelfAdjointEigenSolver<CovType<dim>> sasA(A);
     CovType<dim> root_A = sasA.operatorSqrt();
     CovType<dim> inv_root_A = sasA.operatorInverseSqrt();
@@ -225,8 +226,8 @@ using Coupling = Eigen::SparseMatrix<scalar,Eigen::RowMajor>;
 
 scalar EvalCoupling(const Coupling& pi,const cost_function& cost);
 
-template<int D>
-Points<D> CouplingToGrad(const Coupling& pi,const Points<D>& A,const Points<D>& B) {
+template<int D, typename Scalar = scalar>
+Points<D, Scalar> CouplingToGrad(const Coupling& pi,const Points<D, Scalar>& A,const Points<D, Scalar>& B) {
     Points<D> Grad = Points<D>::Zero(A.rows(),A.cols());
     for (int k = 0;k<pi.outerSize();k++)
         for (Coupling::InnerIterator it(pi,k);it;++it)
@@ -319,8 +320,8 @@ inline void NormalizeDyn(Points<-1> &X, scalar dilat = 1)
 }
 
 
-template<int dim>
-void Normalize(Points<dim> &X, Vector<dim> offset = Vector<dim>::Zero(dim), scalar dilat = 1)
+template<int dim, typename Scalar = scalar>
+void Normalize(Points<dim, Scalar> &X, Vector<dim, Scalar> offset = Vector<dim, Scalar>::Zero(dim), Scalar dilat = 1)
 {
     if (dim == -1) {
         offset = Vector<dim>::Zero(X.rows());
@@ -336,15 +337,15 @@ void Normalize(Points<dim> &X, Vector<dim> offset = Vector<dim>::Zero(dim), scal
 }
 
 
-template<int dim>
-Points<dim> concat(const Points<dim>& X,const Points<dim>& Y) {
+template<int dim, typename Scalar = scalar>
+Points<dim, Scalar> concat(const Points<dim, Scalar>& X,const Points<dim, Scalar>& Y) {
     Points<dim> rslt(X.rows(),X.cols() + Y.cols());
     rslt << X,Y;
     return rslt;
 }
 
-template<int dim>
-Points<dim> pad(const Points<dim>& X,int target) {
+template<int dim, typename Scalar = scalar>
+Points<dim, Scalar> pad(const Points<dim, Scalar>& X,int target) {
     int n = X.cols();
     Points<dim> rslt(dim,target);
     for (auto i : range(target))
@@ -353,8 +354,8 @@ Points<dim> pad(const Points<dim>& X,int target) {
 }
 
 
-template<int dim>
-Points<dim> trunc(const Points<dim>& X,int target) {
+template<int dim, typename Scalar = scalar>
+Points<dim, Scalar> trunc(const Points<dim, Scalar>& X,int target) {
     static thread_local std::random_device rd;
     static thread_local std::mt19937 g(rd());
     ints I = rangeVec(X.cols());
@@ -365,8 +366,8 @@ Points<dim> trunc(const Points<dim>& X,int target) {
     return rslt;
 }
 
-template<int dim>
-inline Points<dim> ForceToSize(const Points<dim>& X,int target) {
+template<int dim, typename Scalar = scalar>
+inline Points<dim, Scalar> ForceToSize(const Points<dim, Scalar>& X,int target) {
     if (X.size() == target)
         return X;
     if (X.size() < target)
@@ -747,8 +748,8 @@ inline Mat sampleUnitBall(int N,int d) {
 }
 
 
-template<int D>
-inline Points<D> sampleUnitBall(int N,int dim = D) {
+template<int D, typename Scalar = scalar>
+inline Points<D, Scalar> sampleUnitBall(int N,int dim = D) {
     static std::mt19937 gen;
     static std::normal_distribution<double> gaussian_dist;
     static std::uniform_real_distribution<double> uniform_dist;
@@ -770,8 +771,8 @@ inline Points<D> sampleUnitBall(int N,int dim = D) {
     return X;
 }
 
-template<int D>
-inline Vector<D> sampleUnitGaussian(int dim = D) {
+template<int D, typename Scalar = scalar>
+inline Vector<D, Scalar> sampleUnitGaussian(int dim = D) {
     static thread_local std::random_device rd;
     static thread_local std::mt19937 gen(rd());
     std::normal_distribution<double> gaussian_dist(0,1);
@@ -811,8 +812,8 @@ public:
 
     scalar evalMatching(const cost_function& cost) const;
 
-    template<int D>
-    scalar evalMatchingL2(const Points<D>& A,const Points<D>& B) const {
+    template<int D, typename Scalar = scalar>
+    Scalar evalMatchingL2(const Points<D, Scalar>& A,const Points<D, Scalar>& B) const {
         return (A - B(Eigen::all,plan)).squaredNorm()/A.cols();
     }
 
@@ -1774,7 +1775,7 @@ BSPOT::InjectiveMatching BSPOT::MergePlans(const std::vector<InjectiveMatching> 
 
 namespace BSPOT {
 
-template<int D>
+template<int D, typename Scalar = scalar>
 class PartialBSPMatching {
 public:
     using TransportPlan = ints;
@@ -1950,8 +1951,8 @@ public:
 namespace BSPOT {
 
 /*
-template<int D>
-inline Points<D> ReadPointCloud(std::filesystem::path path) {
+template<int D, typename Scalar = scalar>
+inline Points<D, Scalar> ReadPointCloud(std::filesystem::path path) {
     std::ifstream infile(path);
 
     if (!infile.is_open()) {
@@ -1996,8 +1997,8 @@ inline Points<D> ReadPointCloud(std::filesystem::path path) {
 }
 
 
-template<int D>
-void WritePointCloud(std::filesystem::path path,const Points<D>& pts) {
+template<int D, typename Scalar = scalar>
+void WritePointCloud(std::filesystem::path path,const Points<D, Scalar>& pts) {
     // each row is a point
     std::ofstream outfile(path);
     if (!outfile.is_open()) {
@@ -2033,7 +2034,7 @@ void WritePointCloud(std::filesystem::path path,const Points<D>& pts) {
 
 namespace BSPOT {
 
-template<int D>
+template<int D, typename Scalar = scalar>
 class BijectiveBSPMatching {
 public:
     using TransportPlan = ints;
@@ -2370,7 +2371,7 @@ public:
 
 namespace BSPOT {
 
-template<int D>
+template<int D, typename Scalar = scalar>
 class GeneralBSPMatching {
 public:
 protected:
@@ -2738,8 +2739,8 @@ BijectiveMatching MergePlans(const std::vector<BijectiveMatching>& plans,const c
 */
 
 
-template<int dim>
-BijectiveMatching computeGaussianBSPOT(const Points<dim>& A,const Points<dim>& B,int nb_plans,const cost_function& cost,BijectiveMatching T = BijectiveMatching()) {
+template<int dim, typename Scalar = scalar>
+BijectiveMatching computeGaussianBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
     BijectiveBSPMatching BSP(A,B);
 #pragma omp parallel for
@@ -2748,8 +2749,8 @@ BijectiveMatching computeGaussianBSPOT(const Points<dim>& A,const Points<dim>& B
     return MergePlans(plans,cost,T,(A.cols() < 500000));
 }
 
-template<int dim>
-BijectiveMatching computeBijectiveBSPOT(const Points<dim>& A,const Points<dim>& B,int nb_plans,const cost_function& cost,BijectiveMatching T = BijectiveMatching()) {
+template<int dim, typename Scalar = scalar>
+BijectiveMatching computeBijectiveBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
     BijectiveBSPMatching BSP(A,B);
     int d = A.rows();
@@ -2760,8 +2761,8 @@ BijectiveMatching computeBijectiveBSPOT(const Points<dim>& A,const Points<dim>& 
     return MergePlans(plans,cost,T);
 }
 
-template<int dim>
-BijectiveMatching computeBijectiveOrthogonalBSPOT(const Points<dim>& A,const Points<dim>& B,int nb_plans,const cost_function& cost,BijectiveMatching T = BijectiveMatching()) {
+template<int dim, typename Scalar = scalar>
+BijectiveMatching computeBijectiveOrthogonalBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
     BijectiveBSPMatching BSP(A,B);
     int d = A.rows();
@@ -2774,14 +2775,14 @@ BijectiveMatching computeBijectiveOrthogonalBSPOT(const Points<dim>& A,const Poi
     return MergePlans(plans,cost,T);
 }
 
-template<int dim>
-Coupling computeBSPOTCoupling(const Points<dim>& A,const Atoms& mu,const Points<dim>& B,const Atoms& nu) {
+template<int dim, typename Scalar = scalar>
+Coupling computeBSPOTCoupling(const Points<dim, Scalar>& A,const Atoms& mu,const Points<dim, Scalar>& B,const Atoms& nu) {
     GeneralBSPMatching BSP(A,mu,B,nu);
     return BSP.computeCoupling();
 }
 
-template<int dim>
-Points<dim> computeBSPOTGradient(const Points<dim>& A,const Atoms& mu,const Points<dim>& B,const Atoms& nu,int nb_plans) {
+template<int dim, typename Scalar = scalar>
+Points<dim, Scalar> computeBSPOTGradient(const Points<dim, Scalar>& A,const Atoms& mu,const Points<dim, Scalar>& B,const Atoms& nu,int nb_plans) {
     Points<dim> Grad = Points<dim>::Zero(A.rows(),A.cols());
     int d = A.rows();
 #pragma omp parallel for
@@ -2797,8 +2798,8 @@ Points<dim> computeBSPOTGradient(const Points<dim>& A,const Atoms& mu,const Poin
 }
 
 
-template<int dim>
-InjectiveMatching computePartialBSPOT(const Points<dim>& A,const Points<dim>& B,int nb_plans,const cost_function& cost,InjectiveMatching T = InjectiveMatching()) {
+template<int dim, typename Scalar = scalar>
+InjectiveMatching computePartialBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,InjectiveMatching T = InjectiveMatching()) {
     std::vector<InjectiveMatching> plans(nb_plans);
     PartialBSPMatching<dim> BSP(A,B,cost);
 #pragma omp parallel for
@@ -2814,8 +2815,8 @@ InjectiveMatching computePartialBSPOT(const Points<dim>& A,const Points<dim>& B,
 }
 
 
-template<int dim>
-InjectiveMatching computePartialOrthogonalBSPOT(const Points<dim>& A,const Points<dim>& B,int nb_plans,const cost_function& cost,InjectiveMatching T = InjectiveMatching()) {
+template<int dim, typename Scalar = scalar>
+InjectiveMatching computePartialOrthogonalBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,InjectiveMatching T = InjectiveMatching()) {
     std::vector<InjectiveMatching> plans(nb_plans);
     PartialBSPMatching<dim> BSP(A,B,cost);
 #pragma omp parallel for
