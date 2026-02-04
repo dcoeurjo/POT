@@ -141,9 +141,9 @@ CovType<D, Scalar> Covariance(const Points<D, Scalar>& X) {
 
 template<int D, typename Scalar = scalar>
 CovType<D, Scalar> Covariance(const Points<D, Scalar>& X,const Points<D, Scalar>& Y) {
-    Vector<D, Scalar> meanX = Mean(X);
+    Vector<D, Scalar> meanX = Mean<D, Scalar>(X);
     Points<D, Scalar> centeredX = X.colwise() - meanX;
-    Vector<D, Scalar> meanY = Mean(Y);
+    Vector<D, Scalar> meanY = Mean<D, Scalar>(Y);
     Points<D, Scalar> centeredY = Y.colwise() - meanY;
     CovType<D, Scalar> rslt = centeredX * centeredY.adjoint() / double(X.cols());
     return rslt;
@@ -162,7 +162,7 @@ CovType<dim, Scalar> W2GaussianTransportMap(const CovType<dim, Scalar>& A,const 
     CovType<dim, Scalar> root_A = sasA.operatorSqrt();
     CovType<dim, Scalar> inv_root_A = sasA.operatorInverseSqrt();
     CovType<dim, Scalar> C = root_A * B * root_A;
-    C = sqrt(C);
+    C = sqrt<dim, Scalar>(C);
     C = inv_root_A*C*inv_root_A;
     return C;
 }
@@ -326,8 +326,8 @@ void Normalize(Points<dim, Scalar> &X, Vector<dim, Scalar> offset = Vector<dim, 
     if (dim == -1) {
         offset = Vector<dim, Scalar>::Zero(X.rows());
     }
-    Vector<dim> min = X.rowwise().minCoeff();
-    Vector<dim> max = X.rowwise().maxCoeff();
+    Vector<dim, Scalar> min = X.rowwise().minCoeff();
+    Vector<dim, Scalar> max = X.rowwise().maxCoeff();
     Vector<dim> scale = max - min;
     double f = dilat/scale.maxCoeff();
     Vector<dim> c = (min+max)*0.5;
@@ -2742,7 +2742,7 @@ BijectiveMatching MergePlans(const std::vector<BijectiveMatching>& plans,const c
 template<int dim, typename Scalar = scalar>
 BijectiveMatching computeGaussianBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
-    BijectiveBSPMatching BSP(A,B);
+    BijectiveBSPMatching<dim, Scalar> BSP(A,B);
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++)
         plans[i] = BSP.computeGaussianMatching();
@@ -2752,7 +2752,7 @@ BijectiveMatching computeGaussianBSPOT(const Points<dim, Scalar>& A,const Points
 template<int dim, typename Scalar = scalar>
 BijectiveMatching computeBijectiveBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
-    BijectiveBSPMatching BSP(A,B);
+    BijectiveBSPMatching<dim, Scalar> BSP(A,B);
     int d = A.rows();
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++){
@@ -2764,7 +2764,7 @@ BijectiveMatching computeBijectiveBSPOT(const Points<dim, Scalar>& A,const Point
 template<int dim, typename Scalar = scalar>
 BijectiveMatching computeBijectiveOrthogonalBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,BijectiveMatching T = BijectiveMatching()) {
     std::vector<BijectiveMatching> plans(nb_plans);
-    BijectiveBSPMatching BSP(A,B);
+    BijectiveBSPMatching<dim, Scalar> BSP(A,B);
     int d = A.rows();
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++){
@@ -2777,7 +2777,7 @@ BijectiveMatching computeBijectiveOrthogonalBSPOT(const Points<dim, Scalar>& A,c
 
 template<int dim, typename Scalar = scalar>
 Coupling computeBSPOTCoupling(const Points<dim, Scalar>& A,const Atoms& mu,const Points<dim, Scalar>& B,const Atoms& nu) {
-    GeneralBSPMatching BSP(A,mu,B,nu);
+    GeneralBSPMatching<dim, Scalar> BSP(A,mu,B,nu);
     return BSP.computeCoupling();
 }
 
@@ -2787,7 +2787,7 @@ Points<dim, Scalar> computeBSPOTGradient(const Points<dim, Scalar>& A,const Atom
     int d = A.rows();
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++) {
-        GeneralBSPMatching BSP(A,mu,B,nu);
+        GeneralBSPMatching<dim, Scalar> BSP(A,mu,B,nu);
         Points<dim, Scalar> Grad_i = BSP.computeTransportGradient();
         #pragma omp critical
         {
@@ -2801,7 +2801,7 @@ Points<dim, Scalar> computeBSPOTGradient(const Points<dim, Scalar>& A,const Atom
 template<int dim, typename Scalar = scalar>
 InjectiveMatching computePartialBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,InjectiveMatching T = InjectiveMatching()) {
     std::vector<InjectiveMatching> plans(nb_plans);
-    PartialBSPMatching<dim> BSP(A,B,cost);
+    PartialBSPMatching<dim, Scalar> BSP(A,B,cost);
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++){
         plans[i] = BSP.computePartialMatching();
@@ -2818,7 +2818,7 @@ InjectiveMatching computePartialBSPOT(const Points<dim, Scalar>& A,const Points<
 template<int dim, typename Scalar = scalar>
 InjectiveMatching computePartialOrthogonalBSPOT(const Points<dim, Scalar>& A,const Points<dim, Scalar>& B,int nb_plans,const cost_function<Scalar>& cost,InjectiveMatching T = InjectiveMatching()) {
     std::vector<InjectiveMatching> plans(nb_plans);
-    PartialBSPMatching<dim> BSP(A,B,cost);
+    PartialBSPMatching<dim, Scalar> BSP(A,B,cost);
 #pragma omp parallel for
     for (int i = 0;i<nb_plans;i++){
         Points<dim> Q = sampleUnitGaussianMat(dim,dim).fullPivHouseholderQr().matrixQ();
